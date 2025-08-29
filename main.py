@@ -11,17 +11,14 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.pretraining_trainer import PPGPretrainer
-from src.pretraining_dataset import create_pretraining_dataloader
 from src.lightning_trainer import PPGLightningTrainer
 
 
 def main():
     parser = argparse.ArgumentParser(description='PPG Signal Pretraining')
     
-    # Framework choice
-    parser.add_argument('--use_lightning', action='store_true',
-                       help='Use PyTorch Lightning for training (recommended)')
+    
+    
     
     # Data arguments
     parser.add_argument('--data_dir', type=str, 
@@ -90,7 +87,6 @@ def main():
     
     print("PPG Signal Pretraining Pipeline")
     print("=" * 50)
-    print(f"Framework: {'PyTorch Lightning' if args.use_lightning else 'Standard PyTorch'}")
     print(f"Model type: {args.model_type}")
     print(f"Hidden size: {args.hidden_size}")
     print(f"Sequence length: {args.sequence_length}")
@@ -109,92 +105,38 @@ def main():
         print(f"Test subjects: {args.test_subjects}")
     print("=" * 50)
     
-    if args.use_lightning:
-        # Use PyTorch Lightning trainer
-        print("Using PyTorch Lightning for training...")
-        
-        trainer = PPGLightningTrainer(
-            model_type=args.model_type,
-            hidden_size=args.hidden_size,
-            learning_rate=args.learning_rate,
-            weight_decay=args.weight_decay
-        )
-        
-        # Train with Lightning
-        lightning_trainer, lightning_module = trainer.train(
-            data_dir=args.data_dir,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            sequence_length=args.sequence_length,
-            mask_ratio=args.mask_ratio,
-            mask_strategy=args.mask_strategy,
-            overlap=args.overlap,
-            num_workers=args.num_workers,
-            save_dir=args.save_dir,
-            save_interval=args.save_interval,
-            train_subjects=args.train_subjects,
-            val_subjects=args.val_subjects,
-            test_subjects=args.test_subjects
-        )
-        
-        print("\nLightning training completed successfully!")
-        print(f"Checkpoints saved in: {args.save_dir}")
-        print(f"TensorBoard logs: {args.save_dir}/tensorboard_logs")
-        print(f"View with: tensorboard --logdir {args.save_dir}/tensorboard_logs")
-        
-    else:
-        # Use original trainer (for backward compatibility)
-        print("Using standard PyTorch training...")
-        
-        # Create data loader
-        print("Loading data...")
-        train_loader = create_pretraining_dataloader(
-            data_dir=args.data_dir,
-            batch_size=args.batch_size,
-            sequence_length=args.sequence_length,
-            mask_ratio=args.mask_ratio,
-            mask_strategy=args.mask_strategy,
-            overlap=args.overlap,
-            num_workers=args.num_workers,
-            normalize=True,
-            augment=True
-        )
-        
-        print(f"Created data loader with {len(train_loader)} batches")
-        
-        # Initialize trainer
-        print("Initializing trainer...")
-        trainer = PPGPretrainer(
-            model_type=args.model_type,
-            hidden_size=args.hidden_size,
-            learning_rate=args.learning_rate,
-            weight_decay=args.weight_decay,
-            device=args.device
-        )
-        
-        # Start training
-        print("Starting pretraining...")
-        trainer.train(
-            train_loader=train_loader,
-            val_loader=None,  # You can add validation split if needed
-            epochs=args.epochs,
-            save_dir=args.save_dir,
-            save_interval=args.save_interval
-        )
-        
-        # Save input conv layers separately for easy transfer
-        conv_save_path = os.path.join(args.save_dir, 'pretrained_input_convs.pth')
-        trainer.save_input_conv_layers(conv_save_path)
-        
-        # Plot training history
-        plot_save_path = os.path.join(args.save_dir, 'training_history.png')
-        trainer.plot_training_history(save_path=plot_save_path)
-        
-        print("\nPretraining completed successfully!")
-        print(f"Checkpoints saved in: {args.save_dir}")
-        print(f"Input conv layers saved in: {conv_save_path}")
-        print(f"Training plot saved in: {plot_save_path}")
+    # Use PyTorch Lightning trainer
+    print("Using PyTorch Lightning for training...")
     
+    trainer = PPGLightningTrainer(
+        model_type=args.model_type,
+        hidden_size=args.hidden_size,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay
+    )
+    
+    # Train with Lightning
+    lightning_trainer, lightning_module = trainer.train(
+        data_dir=args.data_dir,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        sequence_length=args.sequence_length,
+        mask_ratio=args.mask_ratio,
+        mask_strategy=args.mask_strategy,
+        overlap=args.overlap,
+        num_workers=args.num_workers,
+        save_dir=args.save_dir,
+        save_interval=args.save_interval,
+        train_subjects=args.train_subjects,
+        val_subjects=args.val_subjects,
+        test_subjects=args.test_subjects
+    )
+    
+    print("\nLightning training completed successfully!")
+    print(f"Checkpoints saved in: {args.save_dir}")
+    print(f"TensorBoard logs: {args.save_dir}/tensorboard_logs")
+    print(f"View with: tensorboard --logdir {args.save_dir}/tensorboard_logs")
+        
     # Print transfer learning instructions
     print("\nNext Steps for Transfer Learning:")
     print("-" * 40)
