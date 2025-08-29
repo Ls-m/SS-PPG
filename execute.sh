@@ -1,0 +1,1 @@
+python main.py --use_lightning --model_type masked_reconstruction --epochs 50
