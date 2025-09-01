@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 import random
 from typing import Tuple, List, Optional, Dict
 import re
-
+from scipy import signal
 
 class PPGSubjectDataset(Dataset):
     """
@@ -59,7 +59,16 @@ class PPGSubjectDataset(Dataset):
         self.sequences = self._create_sequences()
         
         print(f"Loaded {len(self.sequences)} sequences from {len(self.subjects)} subjects")
-    
+    def downsample_signal(self, signal_data: np.ndarray, 
+                         original_rate: int, target_rate: int) -> np.ndarray:
+        """Downsample the signal to target sampling rate."""
+        if original_rate == target_rate:
+            return signal_data
+            
+        downsample_factor = original_rate // target_rate
+        downsampled = signal.decimate(signal_data, downsample_factor, ftype='fir')
+        
+        return downsampled
     def _load_subject_data(self) -> List[Dict]:
         """Load PPG signals from specified subject files"""
         data = []
@@ -91,7 +100,8 @@ class PPGSubjectDataset(Dataset):
             if len(ppg_signal) < self.sequence_length:
                 print(f"Warning: Signal too short for subject {subject_id}: {len(ppg_signal)} < {self.sequence_length}")
                 continue
-            
+            ppg_signal = self.downsample_signal(ppg_signal, 125, 25)
+
             # Normalize per subject
             if self.normalize:
                 scaler = StandardScaler()
@@ -284,21 +294,21 @@ class PPGLightningDataModule(pl.LightningDataModule):
     def _default_train_split(self) -> List[str]:
         """Default training split (first 60% of subjects)"""
         n_subjects = len(self.all_subjects)
-        n_train = int(0.6 * n_subjects)
+        n_train = int(0.7 * n_subjects)
         return self.all_subjects[:n_train]
     
     def _default_val_split(self) -> List[str]:
         """Default validation split (next 20% of subjects)"""
         n_subjects = len(self.all_subjects)
-        n_train = int(0.6 * n_subjects)
+        n_train = int(0.7 * n_subjects)
         n_val = int(0.2 * n_subjects)
         return self.all_subjects[n_train:n_train + n_val]
     
     def _default_test_split(self) -> List[str]:
         """Default test split (last 20% of subjects)"""
         n_subjects = len(self.all_subjects)
-        n_train = int(0.6 * n_subjects)
-        n_val = int(0.2 * n_subjects)
+        n_train = int(0.7 * n_subjects)
+        n_val = int(0.1 * n_subjects)
         return self.all_subjects[n_train + n_val:]
     
     def setup(self, stage: str = None):
