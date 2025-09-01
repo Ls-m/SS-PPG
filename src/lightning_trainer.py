@@ -341,7 +341,7 @@ class PPGLightningTrainer:
             ),
             pl.callbacks.EarlyStopping(
                 monitor='val_loss',
-                patience=20,
+                patience=200,
                 mode='min'
             ),
             pl.callbacks.LearningRateMonitor(logging_interval='epoch'),
