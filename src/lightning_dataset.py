@@ -176,7 +176,7 @@ class PPGSubjectDataset(Dataset):
         
         return mask
     
-    def _add_noise(self, signal: np.ndarray, noise_level: float = 0.1) -> np.ndarray:
+    def _add_noise(self, signal: np.ndarray, noise_level: float = 0.4) -> np.ndarray:
         """Add noise to signal for denoising task"""
         noise = np.random.normal(0, noise_level * np.std(signal), signal.shape)
         return signal + noise
