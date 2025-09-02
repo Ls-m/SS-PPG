@@ -100,7 +100,7 @@ class PPGSubjectDataset(Dataset):
             if len(ppg_signal) < self.sequence_length:
                 print(f"Warning: Signal too short for subject {subject_id}: {len(ppg_signal)} < {self.sequence_length}")
                 continue
-            ppg_signal = self.downsample_signal(ppg_signal, 125, 25)
+            # ppg_signal = self.downsample_signal(ppg_signal, 125, 25)
 
             # Normalize per subject
             if self.normalize:
