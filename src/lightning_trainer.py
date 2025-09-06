@@ -336,7 +336,7 @@ class PPGLightningTrainer:
                 dirpath=save_dir,
                 filename='checkpoint-{epoch:02d}',
                 every_n_epochs=save_interval,
-                save_top_k=-1,  # Save all checkpoints
+                save_top_k=1,  # Save only the best checkpoint
                 save_last=True
             ),
             pl.callbacks.EarlyStopping(
