@@ -129,12 +129,12 @@ class PPGSubjectDataset(Dataset):
         else:
             return signal_data
     
-    def apply_bandpass_filter(self, signal_data: np.ndarray, 
+    def apply_bandpass_filter(signal_data: np.ndarray, 
                             sampling_rate: int) -> np.ndarray:
         """Apply bandpass filter to the signal."""
-        low_freq = self.preprocess_config['bandpass_filter']['low_freq']
-        high_freq = self.preprocess_config['bandpass_filter']['high_freq']
-        order = self.preprocess_config['bandpass_filter']['order']
+        low_freq = 0.1
+        high_freq = 0.6
+        order = 2
         
         nyquist = sampling_rate / 2
         low = low_freq / nyquist
