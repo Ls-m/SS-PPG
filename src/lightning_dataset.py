@@ -69,6 +69,105 @@ class PPGSubjectDataset(Dataset):
         downsampled = signal.decimate(signal_data, downsample_factor, ftype='fir')
         
         return downsampled
+    
+    def normalize_signal(signal_data: np.ndarray, 
+                        method: str = 'z_score') -> np.ndarray:
+        """Normalize the signal using specified method."""
+        # Check for invalid values
+        if len(signal_data) == 0 or np.all(np.isnan(signal_data)):
+            return signal_data
+        
+        # Remove outliers using IQR method
+        Q1 = np.percentile(signal_data, 25)
+        Q3 = np.percentile(signal_data, 75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 3 * IQR
+        upper_bound = Q3 + 3 * IQR
+        
+        # Clip outliers
+        signal_data = np.clip(signal_data, lower_bound, upper_bound)
+            
+        if method == 'z_score':
+            # Handle case where std is 0
+            mean_val = np.mean(signal_data)
+            std_val = np.std(signal_data)
+            
+            if std_val == 0 or np.isnan(std_val) or np.isnan(mean_val):
+                return np.zeros_like(signal_data)
+            
+            normalized = (signal_data - mean_val) / std_val
+            
+            # Additional clipping to prevent extreme values
+            normalized = np.clip(normalized, -5.0, 5.0)
+            
+            # Replace any remaining NaN/Inf values with 0
+            normalized = np.nan_to_num(normalized, nan=0.0, posinf=0.0, neginf=0.0)
+            return normalized
+            
+        elif method == 'min_max':
+            min_val = np.min(signal_data)
+            max_val = np.max(signal_data)
+            
+            if max_val == min_val:
+                return np.zeros_like(signal_data)
+            
+            normalized = 2 * (signal_data - min_val) / (max_val - min_val) - 1
+            normalized = np.nan_to_num(normalized, nan=0.0, posinf=0.0, neginf=0.0)
+            return normalized
+            
+        elif method == 'robust':
+            median_val = np.median(signal_data)
+            mad = np.median(np.abs(signal_data - median_val))
+            
+            if mad == 0:
+                return np.zeros_like(signal_data)
+            
+            normalized = (signal_data - median_val) / (1.4826 * mad)
+            normalized = np.clip(normalized, -5.0, 5.0)
+            normalized = np.nan_to_num(normalized, nan=0.0, posinf=0.0, neginf=0.0)
+            return normalized
+        else:
+            return signal_data
+    
+    def apply_bandpass_filter(self, signal_data: np.ndarray, 
+                            sampling_rate: int) -> np.ndarray:
+        """Apply bandpass filter to the signal."""
+        low_freq = self.preprocess_config['bandpass_filter']['low_freq']
+        high_freq = self.preprocess_config['bandpass_filter']['high_freq']
+        order = self.preprocess_config['bandpass_filter']['order']
+        
+        nyquist = sampling_rate / 2
+        low = low_freq / nyquist
+        high = high_freq / nyquist
+        
+        # Validate frequency bounds
+        if low <= 0:
+            print(f"Warning: Low frequency {low_freq} too low, setting to 0.01 Hz")
+            low = 0.01 / nyquist
+        if high >= 1:
+            print(f"Warning: High frequency {high_freq} too high, setting to {nyquist * 0.9} Hz")
+            high = 0.9
+        if low >= high:
+            print(f"Warning: Low frequency >= High frequency, adjusting...")
+            low = high * 0.1
+        
+        try:
+            # Use second-order sections (SOS) for better numerical stability
+            sos = signal.butter(order, [low, high], btype='band', output='sos')
+            filtered_signal = signal.sosfiltfilt(sos, signal_data)
+            
+            # Check for NaN values after filtering
+            if np.isnan(filtered_signal).any():
+                print(f"Warning: NaN values detected after filtering, using original signal")
+                return signal_data
+            
+            return filtered_signal
+            
+        except Exception as e:
+            print(f"Error in bandpass filtering: {e}")
+            print("Returning original signal without filtering")
+            return signal_data
+        
     def _load_subject_data(self) -> List[Dict]:
         """Load PPG signals from specified subject files"""
         data = []
@@ -101,11 +200,12 @@ class PPGSubjectDataset(Dataset):
                 print(f"Warning: Signal too short for subject {subject_id}: {len(ppg_signal)} < {self.sequence_length}")
                 continue
             # ppg_signal = self.downsample_signal(ppg_signal, 125, 25)
-
+            original_rate = 125
+            ppg_signal = self.apply_bandpass_filter(ppg_signal, original_rate)
             # Normalize per subject
             if self.normalize:
-                scaler = StandardScaler()
-                ppg_signal = scaler.fit_transform(ppg_signal.reshape(-1, 1)).flatten()
+                ppg_signal = self.normalize_signal(ppg_signal, 'z_score')
+                
             
             data.append({
                 'subject_id': subject_id,
