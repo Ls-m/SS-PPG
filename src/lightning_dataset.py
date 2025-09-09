@@ -70,7 +70,7 @@ class PPGSubjectDataset(Dataset):
         
         return downsampled
     
-    def normalize_signal(signal_data: np.ndarray, 
+    def normalize_signal(self,signal_data: np.ndarray, 
                         method: str = 'z_score') -> np.ndarray:
         """Normalize the signal using specified method."""
         # Check for invalid values
@@ -129,7 +129,7 @@ class PPGSubjectDataset(Dataset):
         else:
             return signal_data
     
-    def apply_bandpass_filter(signal_data: np.ndarray, 
+    def apply_bandpass_filter(self,signal_data: np.ndarray, 
                             sampling_rate: int) -> np.ndarray:
         """Apply bandpass filter to the signal."""
         low_freq = 0.1
